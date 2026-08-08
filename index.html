@@ -300,14 +300,17 @@
   .lb-info a.lb-link:hover{ text-decoration:underline; }
   .lb-info .lb-date{ font-size:12px; color:var(--ink-soft); margin-bottom:24px; }
   .lb-spacer{ flex:1; }
-  .lb-delete{
+  .lb-btn-row{ display:flex; gap:8px; }
+  .lb-edit, .lb-delete{
     font-family:inherit;
     align-self:flex-start;
     background:none; border:1px solid var(--line);
-    color:#B5473B;
     padding:9px 14px; border-radius:10px;
     font-size:12.5px; font-weight:600; cursor:pointer;
   }
+  .lb-edit{ color:var(--ink); }
+  .lb-edit:hover{ background:var(--bg-soft); }
+  .lb-delete{ color:#B5473B; }
   .lb-delete:hover{ background:#FBEBE9; border-color:#F0C9C4; }
   .lb-close{
     position:absolute; top:20px; right:24px;
@@ -316,8 +319,76 @@
     color:#fff;
     display:flex; align-items:center; justify-content:center;
     cursor:pointer; border:none; font-size:18px;
+    z-index:5;
   }
   .lb-close:hover{ background:rgba(255,255,255,0.28); }
+
+  /* Carousel */
+  .lb-img-wrap{ position:relative; }
+  .carousel-arrow{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:38px; height:38px; border-radius:50%;
+    background:rgba(0,0,0,0.4);
+    color:#fff; border:none;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:18px; z-index:4;
+    transition:.15s ease;
+  }
+  .carousel-arrow:hover{ background:rgba(0,0,0,0.6); }
+  .carousel-arrow.prev{ left:14px; }
+  .carousel-arrow.next{ right:14px; }
+  .carousel-dots{
+    position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+    display:flex; gap:6px; z-index:4;
+  }
+  .carousel-dots .dot{
+    width:6px; height:6px; border-radius:50%;
+    background:rgba(255,255,255,0.5);
+    cursor:pointer;
+  }
+  .carousel-dots .dot.active{ background:#fff; }
+  .carousel-count{
+    position:absolute; top:14px; left:14px;
+    background:rgba(0,0,0,0.4); color:#fff;
+    font-size:11.5px; font-weight:600;
+    padding:4px 10px; border-radius:999px;
+    z-index:4;
+  }
+
+  /* Card carousel (grid) */
+  .card .img-wrap{ position:relative; }
+  .card .img-count{
+    position:absolute; top:8px; right:8px;
+    background:rgba(0,0,0,0.5); color:#fff;
+    font-size:10.5px; font-weight:700;
+    padding:3px 7px; border-radius:999px;
+    display:flex; align-items:center; gap:3px;
+  }
+
+  /* Edit modal reuse */
+  .thumb-strip{
+    display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;
+  }
+  .thumb-item{
+    position:relative; width:64px; height:64px; border-radius:8px;
+    overflow:hidden; border:1px solid var(--line);
+  }
+  .thumb-item img{ width:100%; height:100%; object-fit:cover; }
+  .thumb-item .remove{
+    position:absolute; top:2px; right:2px;
+    width:16px; height:16px; border-radius:50%;
+    background:rgba(0,0,0,0.6); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; cursor:pointer; border:none; line-height:1;
+  }
+  .add-more-btn{
+    width:64px; height:64px; border-radius:8px;
+    border:1.5px dashed var(--line);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--ink-soft); font-size:20px;
+    background:var(--bg-soft);
+  }
+  .add-more-btn:hover{ border-color:var(--accent); color:var(--accent); }
 
   ::-webkit-scrollbar{ width:9px; }
   ::-webkit-scrollbar-thumb{ background:#DED4BE; border-radius:10px; }
@@ -382,13 +453,44 @@
 <div class="lightbox" id="lightbox">
   <button class="lb-close" id="lbClose">✕</button>
   <div class="lb-inner">
-    <div class="lb-img-wrap"><img id="lbImg" src="" /></div>
+    <div class="lb-img-wrap" id="lbImgWrap">
+      <span class="carousel-count" id="lbCount" style="display:none;"></span>
+      <img id="lbImg" src="" />
+      <button class="carousel-arrow prev" id="lbPrev" style="display:none;">‹</button>
+      <button class="carousel-arrow next" id="lbNext" style="display:none;">›</button>
+      <div class="carousel-dots" id="lbDots"></div>
+    </div>
     <div class="lb-info">
       <h3 id="lbName"></h3>
       <a class="lb-link" id="lbLink" target="_blank" rel="noopener"></a>
       <div class="lb-date" id="lbDate"></div>
       <div class="lb-spacer"></div>
-      <button class="lb-delete" id="lbDelete">삭제하기</button>
+      <div class="lb-btn-row">
+        <button class="lb-edit" id="lbEdit">수정하기</button>
+        <button class="lb-delete" id="lbDelete">삭제하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <h2>디자인 수정</h2>
+
+    <div class="thumb-strip" id="editThumbStrip"></div>
+
+    <label class="field-label">이름</label>
+    <input class="field" id="editNameInput" placeholder="예: 미니멀 카드 UI" />
+
+    <label class="field-label">링크 (선택)</label>
+    <input class="field" id="editLinkInput" placeholder="https://..." />
+
+    <input type="file" id="editFileInput" accept="image/*" multiple style="display:none;" />
+
+    <div class="modal-actions">
+      <button class="btn-cancel" id="cancelEdit">취소</button>
+      <button class="btn-save" id="saveEdit">저장</button>
     </div>
   </div>
 </div>
@@ -397,7 +499,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, addDoc, deleteDoc, doc,
-  onSnapshot, query, orderBy, serverTimestamp
+  onSnapshot, query, orderBy, serverTimestamp, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -420,6 +522,11 @@ const CLOUDINARY_PRESET = 'Everything';
 // ---------- State ----------
 let allDesigns = [];
 let pendingUploads = []; // {id, file, previewUrl, status, url}
+let lbImages = [];
+let lbIndex = 0;
+let editThumbs = []; // {url} existing, kept as array of urls
+let editPendingUploads = []; // newly added files for edit
+let editingId = null;
 
 // ---------- Elements ----------
 const grid = document.getElementById('grid');
@@ -444,6 +551,19 @@ const lbLink = document.getElementById('lbLink');
 const lbDate = document.getElementById('lbDate');
 const lbClose = document.getElementById('lbClose');
 const lbDelete = document.getElementById('lbDelete');
+const lbEdit = document.getElementById('lbEdit');
+const lbPrev = document.getElementById('lbPrev');
+const lbNext = document.getElementById('lbNext');
+const lbDots = document.getElementById('lbDots');
+const lbCount = document.getElementById('lbCount');
+
+const editOverlay = document.getElementById('editOverlay');
+const editThumbStrip = document.getElementById('editThumbStrip');
+const editNameInput = document.getElementById('editNameInput');
+const editLinkInput = document.getElementById('editLinkInput');
+const editFileInput = document.getElementById('editFileInput');
+const cancelEditBtn = document.getElementById('cancelEdit');
+const saveEditBtn = document.getElementById('saveEdit');
 
 // ---------- Render grid ----------
 function render(){
@@ -457,10 +577,14 @@ function render(){
   countEl.textContent = allDesigns.length ? `${allDesigns.length}개` : '';
 
   filtered.forEach(d => {
+    const images = d.images && d.images.length ? d.images : (d.imageUrl ? [d.imageUrl] : []);
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = `
-      <img src="${d.imageUrl}" loading="lazy" />
+      <div class="img-wrap">
+        <img src="${images[0] || ''}" loading="lazy" />
+        ${images.length > 1 ? `<div class="img-count">🖼 ${images.length}</div>` : ''}
+      </div>
       <div class="meta">
         <div class="name">${escapeHtml(d.name || '이름 없음')}</div>
         ${d.link ? `<div class="link-tag">🔗 링크 보기</div>` : ''}
@@ -490,7 +614,10 @@ searchInput.addEventListener('input', render);
 let currentLightboxId = null;
 function openLightbox(d){
   currentLightboxId = d.id;
-  lbImg.src = d.imageUrl;
+  lbImages = d.images && d.images.length ? d.images : (d.imageUrl ? [d.imageUrl] : []);
+  lbIndex = 0;
+  renderLbImage();
+
   lbName.textContent = d.name || '이름 없음';
   if (d.link){
     lbLink.style.display = 'inline-flex';
@@ -504,14 +631,153 @@ function openLightbox(d){
     : '';
   lightbox.classList.add('open');
 }
+
+function renderLbImage(){
+  lbImg.src = lbImages[lbIndex];
+  const multi = lbImages.length > 1;
+  lbPrev.style.display = multi ? 'flex' : 'none';
+  lbNext.style.display = multi ? 'flex' : 'none';
+  lbCount.style.display = multi ? 'block' : 'none';
+  lbCount.textContent = `${lbIndex + 1} / ${lbImages.length}`;
+  lbDots.innerHTML = '';
+  if (multi){
+    lbImages.forEach((_, i) => {
+      const dot = document.createElement('div');
+      dot.className = 'dot' + (i === lbIndex ? ' active' : '');
+      dot.addEventListener('click', () => { lbIndex = i; renderLbImage(); });
+      lbDots.appendChild(dot);
+    });
+  }
+}
+lbPrev.addEventListener('click', () => { lbIndex = (lbIndex - 1 + lbImages.length) % lbImages.length; renderLbImage(); });
+lbNext.addEventListener('click', () => { lbIndex = (lbIndex + 1) % lbImages.length; renderLbImage(); });
+
 lbClose.addEventListener('click', () => lightbox.classList.remove('open'));
 lightbox.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.classList.remove('open'); });
 
 lbDelete.addEventListener('click', async () => {
   if (!currentLightboxId) return;
-  if (!confirm('이 디자인을 삭제할까요?')) return;
+  if (!confirm('이 디자인을 삭제할까요? 사진 전체가 삭제됩니다.')) return;
   await deleteDoc(doc(db, 'designs', currentLightboxId));
   lightbox.classList.remove('open');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (!lightbox.classList.contains('open')) return;
+  if (e.key === 'ArrowLeft') lbPrev.click();
+  if (e.key === 'ArrowRight') lbNext.click();
+});
+
+// ---------- Edit modal ----------
+lbEdit.addEventListener('click', () => {
+  const d = allDesigns.find(x => x.id === currentLightboxId);
+  if (!d) return;
+  editingId = d.id;
+  editThumbs = d.images && d.images.length ? [...d.images] : (d.imageUrl ? [d.imageUrl] : []);
+  editPendingUploads = [];
+  editNameInput.value = d.name || '';
+  editLinkInput.value = d.link || '';
+  renderEditThumbs();
+  lightbox.classList.remove('open');
+  editOverlay.classList.add('open');
+});
+
+function renderEditThumbs(){
+  editThumbStrip.innerHTML = '';
+  editThumbs.forEach((url, i) => {
+    const el = document.createElement('div');
+    el.className = 'thumb-item';
+    el.innerHTML = `<img src="${url}" /><button class="remove" data-i="${i}">✕</button>`;
+    el.querySelector('.remove').addEventListener('click', () => {
+      editThumbs.splice(i, 1);
+      renderEditThumbs();
+    });
+    editThumbStrip.appendChild(el);
+  });
+  editPendingUploads.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'thumb-item';
+    el.innerHTML = `<img src="${item.previewUrl}" /><button class="remove" data-i="${i}">✕</button>`;
+    if (item.status === 'uploading'){
+      el.innerHTML += `<div class="status" style="position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;"><svg class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><circle cx="12" cy="12" r="9" stroke-opacity="0.3"/><path d="M21 12a9 9 0 0 0-9-9"/></svg></div>`;
+    }
+    el.querySelector('.remove').addEventListener('click', () => {
+      editPendingUploads.splice(i, 1);
+      renderEditThumbs();
+    });
+    editThumbStrip.appendChild(el);
+  });
+  const addBtn = document.createElement('div');
+  addBtn.className = 'add-more-btn';
+  addBtn.textContent = '+';
+  addBtn.addEventListener('click', () => editFileInput.click());
+  editThumbStrip.appendChild(addBtn);
+}
+
+editFileInput.addEventListener('change', (e) => {
+  Array.from(e.target.files).forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const item = { file, previewUrl: URL.createObjectURL(file), status: 'uploading', url: null };
+    editPendingUploads.push(item);
+    uploadToCloudinaryGeneric(item, renderEditThumbs);
+  });
+  renderEditThumbs();
+  editFileInput.value = '';
+});
+
+async function uploadToCloudinaryGeneric(item, onUpdate){
+  try{
+    const formData = new FormData();
+    formData.append('file', item.file);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method:'POST', body:formData });
+    const data = await res.json();
+    if (data.secure_url){
+      item.status = 'done';
+      item.url = data.secure_url;
+    } else {
+      throw new Error('업로드 실패');
+    }
+  } catch(err){
+    item.status = 'error';
+    console.error(err);
+  }
+  onUpdate();
+}
+
+cancelEditBtn.addEventListener('click', () => {
+  editOverlay.classList.remove('open');
+  editingId = null;
+});
+editOverlay.addEventListener('click', (e) => { if (e.target === editOverlay){ editOverlay.classList.remove('open'); editingId = null; } });
+
+saveEditBtn.addEventListener('click', async () => {
+  if (!editingId) return;
+  const stillUploading = editPendingUploads.some(p => p.status === 'uploading');
+  if (stillUploading){ alert('이미지 업로드가 끝날 때까지 기다려주세요.'); return; }
+
+  const newUrls = editPendingUploads.filter(p => p.status === 'done').map(p => p.url);
+  const finalImages = [...editThumbs, ...newUrls];
+  if (finalImages.length === 0){ alert('최소 1장의 이미지가 필요해요.'); return; }
+
+  saveEditBtn.disabled = true;
+  saveEditBtn.textContent = '저장 중...';
+  try{
+    await updateDoc(doc(db, 'designs', editingId), {
+      name: editNameInput.value.trim(),
+      link: editLinkInput.value.trim() || null,
+      images: finalImages,
+      imageUrl: finalImages[0]
+    });
+    editOverlay.classList.remove('open');
+  } catch(err){
+    console.error(err);
+    alert('수정 중 오류가 발생했어요.');
+  } finally {
+    saveEditBtn.disabled = false;
+    saveEditBtn.textContent = '저장';
+    editingId = null;
+  }
 });
 
 // ---------- Add modal ----------
@@ -615,16 +881,16 @@ saveAddBtn.addEventListener('click', async () => {
 
   const name = nameInput.value.trim();
   const link = linkInput.value.trim();
+  const images = doneItems.map(item => item.url);
 
   try {
-    for (const item of doneItems){
-      await addDoc(designsCol, {
-        name: doneItems.length > 1 ? name : name,
-        link: link || null,
-        imageUrl: item.url,
-        createdAt: serverTimestamp()
-      });
-    }
+    await addDoc(designsCol, {
+      name: name,
+      link: link || null,
+      images: images,
+      imageUrl: images[0],
+      createdAt: serverTimestamp()
+    });
     closeModal();
   } catch(err){
     console.error(err);
@@ -639,6 +905,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape'){
     lightbox.classList.remove('open');
     if (overlay.classList.contains('open')) closeModal();
+    if (editOverlay.classList.contains('open')){ editOverlay.classList.remove('open'); editingId = null; }
   }
 });
 </script>
