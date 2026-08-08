@@ -91,6 +91,7 @@
   .lb-cats span{ font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; color:#fff; }
   .lb-link-btn{ font-family:inherit; display:inline-flex; align-items:center; gap:7px; background:#fff; color:var(--ink); border:1.5px solid var(--ink); padding:11px 18px; border-radius:999px; font-size:13px; font-weight:700; cursor:pointer; margin-bottom:22px; width:fit-content; text-decoration:none; transition:.15s ease; }
   .lb-link-btn:hover{ background:var(--ink); color:#fff; transform:translateY(-1px); }
+  .sub-label{ font-size:11px; font-weight:700; color:var(--ink-soft); margin:14px 0 8px; padding-top:14px; border-top:1px dashed var(--line); }
 
   .btn-add{
     font-family:inherit;
@@ -459,7 +460,8 @@
 
     <label class="field-label">Category</label>
     <div class="tag-select" id="catSelect"></div>
-    <div class="tag-select" id="subSelect" style="margin-top:8px;"></div>
+    <div id="subLabel" class="sub-label" style="display:none;"></div>
+    <div class="tag-select" id="subSelect" style="margin-top:0;"></div>
 
     <div class="modal-actions">
       <button class="btn-cancel" id="cancelAdd">취소</button>
@@ -507,7 +509,8 @@
 
     <label class="field-label">Category</label>
     <div class="tag-select" id="editCatSelect"></div>
-    <div class="tag-select" id="editSubSelect" style="margin-top:8px;"></div>
+    <div id="editSubLabel" class="sub-label" style="display:none;"></div>
+    <div class="tag-select" id="editSubSelect" style="margin-top:0;"></div>
 
     <input type="file" id="editFileInput" accept="image/*" multiple style="display:none;" />
 
@@ -569,6 +572,8 @@ const catSelect = document.getElementById('catSelect');
 const editCatSelect = document.getElementById('editCatSelect');
 const subSelect = document.getElementById('subSelect');
 const editSubSelect = document.getElementById('editSubSelect');
+const subLabel = document.getElementById('subLabel');
+const editSubLabel = document.getElementById('editSubLabel');
 
 function renderCatBar(){
   catBar.innerHTML = ['All', ...CATEGORIES].map(c =>
@@ -597,10 +602,15 @@ function renderTagSelect(el, selectedArr, onChange){
   });
 }
 
-function renderSubSelect(el, cats, subArr){
-  const opts = cats.includes('Effect') ? EFFECT_TOOLS : cats.includes('Font') ? FONT_LANGS : [];
+function renderSubSelect(el, cats, subArr, labelEl){
+  const isEffect = cats.includes('Effect');
+  const opts = isEffect ? EFFECT_TOOLS : cats.includes('Font') ? FONT_LANGS : [];
   el.innerHTML = '';
   el.style.display = opts.length ? 'flex' : 'none';
+  if (labelEl){
+    labelEl.style.display = opts.length ? 'block' : 'none';
+    labelEl.textContent = isEffect ? 'Effect Tool' : 'Font Language';
+  }
   opts.forEach(opt => {
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'tag' + (subArr.includes(opt)?' on':'');
@@ -609,7 +619,7 @@ function renderSubSelect(el, cats, subArr){
     btn.addEventListener('click', () => {
       const i = subArr.indexOf(opt);
       if (i === -1) subArr.push(opt); else subArr.splice(i, 1);
-      renderSubSelect(el, cats, subArr);
+      renderSubSelect(el, cats, subArr, labelEl);
     });
     el.appendChild(btn);
   });
@@ -761,8 +771,8 @@ lbEdit.addEventListener('click', () => {
   editLinkInput.value = d.link || '';
   editSelectedCats = [...(d.categories||[])];
   editSelectedSub = [...(d.subTags||[])];
-  renderTagSelect(editCatSelect, editSelectedCats, () => renderSubSelect(editSubSelect, editSelectedCats, editSelectedSub));
-  renderSubSelect(editSubSelect, editSelectedCats, editSelectedSub);
+  renderTagSelect(editCatSelect, editSelectedCats, () => renderSubSelect(editSubSelect, editSelectedCats, editSelectedSub, editSubLabel));
+  renderSubSelect(editSubSelect, editSelectedCats, editSelectedSub, editSubLabel);
   renderEditThumbs();
   lightbox.classList.remove('open');
   editOverlay.classList.add('open');
@@ -871,8 +881,8 @@ saveEditBtn.addEventListener('click', async () => {
 // ---------- Add modal ----------
 function openModal(){
   selectedCats = []; selectedSub = [];
-  renderTagSelect(catSelect, selectedCats, () => renderSubSelect(subSelect, selectedCats, selectedSub));
-  renderSubSelect(subSelect, selectedCats, selectedSub);
+  renderTagSelect(catSelect, selectedCats, () => renderSubSelect(subSelect, selectedCats, selectedSub, subLabel));
+  renderSubSelect(subSelect, selectedCats, selectedSub, subLabel);
   overlay.classList.add('open');
 }
 function closeModal(){
