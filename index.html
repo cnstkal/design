@@ -79,6 +79,17 @@
     width:14px; height:14px; opacity:.5;
   }
 
+  .cat-bar{ max-width:1280px; margin:0 auto; padding:14px 28px 0; display:flex; gap:8px; flex-wrap:wrap; }
+  .cat-chip{ font-family:inherit; font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; }
+  .cat-chip.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .card .cats{ margin-top:6px; display:flex; gap:4px; flex-wrap:wrap; }
+  .card .cats span{ font-size:10px; font-weight:700; color:var(--accent); background:#F6ECE0; padding:2px 7px; border-radius:999px; }
+  .tag-select{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tag-select .tag{ font-family:inherit; font-size:12px; font-weight:600; padding:7px 12px; border-radius:999px; border:1px solid var(--line); background:var(--bg-soft); color:var(--ink-soft); cursor:pointer; }
+  .tag-select .tag.on{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .lb-cats{ display:flex; gap:5px; flex-wrap:wrap; margin-bottom:14px; }
+  .lb-cats span{ font-size:11px; font-weight:700; color:var(--accent); background:#F6ECE0; padding:3px 9px; border-radius:999px; }
+
   .btn-add{
     font-family:inherit;
     background:var(--ink);
@@ -416,6 +427,8 @@
   </div>
 </header>
 
+<div class="cat-bar" id="catBar"></div>
+
 <main>
   <div class="grid" id="grid"></div>
   <div class="empty" id="emptyState" style="display:none;">
@@ -441,6 +454,9 @@
 
     <label class="field-label">링크 (선택)</label>
     <input class="field" id="linkInput" placeholder="https://..." />
+
+    <label class="field-label">Category</label>
+    <div class="tag-select" id="catSelect"></div>
 
     <div class="modal-actions">
       <button class="btn-cancel" id="cancelAdd">취소</button>
@@ -486,6 +502,9 @@
     <label class="field-label">링크 (선택)</label>
     <input class="field" id="editLinkInput" placeholder="https://..." />
 
+    <label class="field-label">Category</label>
+    <div class="tag-select" id="editCatSelect"></div>
+
     <input type="file" id="editFileInput" accept="image/*" multiple style="display:none;" />
 
     <div class="modal-actions">
@@ -519,6 +538,11 @@ const designsCol = collection(db, "designs");
 const CLOUDINARY_CLOUD = 'dbljkloal';
 const CLOUDINARY_PRESET = 'Everything';
 
+const CATEGORIES = ['Design','Source','Font','Color','Mockup','Template','Tool'];
+let activeCat = null;
+let selectedCats = [];
+let editSelectedCats = [];
+
 // ---------- State ----------
 let allDesigns = [];
 let pendingUploads = []; // {id, file, previewUrl, status, url}
@@ -533,6 +557,35 @@ const grid = document.getElementById('grid');
 const emptyState = document.getElementById('emptyState');
 const countEl = document.getElementById('count');
 const searchInput = document.getElementById('searchInput');
+const catBar = document.getElementById('catBar');
+const catSelect = document.getElementById('catSelect');
+const editCatSelect = document.getElementById('editCatSelect');
+
+function renderCatBar(){
+  catBar.innerHTML = ['All', ...CATEGORIES].map(c =>
+    `<button class="cat-chip ${((c==='All'&&!activeCat)||c===activeCat)?'active':''}" data-c="${c}">${c}</button>`
+  ).join('');
+  catBar.querySelectorAll('.cat-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeCat = btn.dataset.c === 'All' ? null : btn.dataset.c;
+      renderCatBar();
+      render();
+    });
+  });
+}
+renderCatBar();
+
+function renderTagSelect(el, selectedArr){
+  el.innerHTML = CATEGORIES.map(c => `<button type="button" class="tag ${selectedArr.includes(c)?'on':''}" data-c="${c}">${c}</button>`).join('');
+  el.querySelectorAll('.tag').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const c = btn.dataset.c;
+      const i = selectedArr.indexOf(c);
+      if (i === -1) selectedArr.push(c); else selectedArr.splice(i, 1);
+      renderTagSelect(el, selectedArr);
+    });
+  });
+}
 
 const overlay = document.getElementById('overlay');
 const openAddBtn = document.getElementById('openAdd');
@@ -568,9 +621,8 @@ const saveEditBtn = document.getElementById('saveEdit');
 // ---------- Render grid ----------
 function render(){
   const q = searchInput.value.trim().toLowerCase();
-  const filtered = q
-    ? allDesigns.filter(d => (d.name||'').toLowerCase().includes(q))
-    : allDesigns;
+  let filtered = q ? allDesigns.filter(d => (d.name||'').toLowerCase().includes(q)) : allDesigns;
+  if (activeCat) filtered = filtered.filter(d => (d.categories||[]).includes(activeCat));
 
   grid.innerHTML = '';
   emptyState.style.display = filtered.length === 0 ? 'flex' : 'none';
@@ -588,6 +640,7 @@ function render(){
       <div class="meta">
         <div class="name">${escapeHtml(d.name || '이름 없음')}</div>
         ${d.link ? `<div class="link-tag">🔗 링크 보기</div>` : ''}
+        ${(d.categories&&d.categories.length) ? `<div class="cats">${d.categories.map(c=>`<span>${c}</span>`).join('')}</div>` : ''}
       </div>
     `;
     card.addEventListener('click', () => openLightbox(d));
@@ -619,6 +672,9 @@ function openLightbox(d){
   renderLbImage();
 
   lbName.textContent = d.name || '이름 없음';
+  let catsEl = document.getElementById('lbCats');
+  if (!catsEl){ catsEl = document.createElement('div'); catsEl.id='lbCats'; catsEl.className='lb-cats'; lbName.after(catsEl); }
+  catsEl.innerHTML = (d.categories||[]).map(c=>`<span>${c}</span>`).join('');
   if (d.link){
     lbLink.style.display = 'inline-flex';
     lbLink.href = d.link;
@@ -677,6 +733,8 @@ lbEdit.addEventListener('click', () => {
   editPendingUploads = [];
   editNameInput.value = d.name || '';
   editLinkInput.value = d.link || '';
+  editSelectedCats = [...(d.categories||[])];
+  renderTagSelect(editCatSelect, editSelectedCats);
   renderEditThumbs();
   lightbox.classList.remove('open');
   editOverlay.classList.add('open');
@@ -767,7 +825,8 @@ saveEditBtn.addEventListener('click', async () => {
       name: editNameInput.value.trim(),
       link: editLinkInput.value.trim() || null,
       images: finalImages,
-      imageUrl: finalImages[0]
+      imageUrl: finalImages[0],
+      categories: editSelectedCats
     });
     editOverlay.classList.remove('open');
   } catch(err){
@@ -782,6 +841,8 @@ saveEditBtn.addEventListener('click', async () => {
 
 // ---------- Add modal ----------
 function openModal(){
+  selectedCats = [];
+  renderTagSelect(catSelect, selectedCats);
   overlay.classList.add('open');
 }
 function closeModal(){
@@ -791,6 +852,7 @@ function closeModal(){
   nameInput.value = '';
   linkInput.value = '';
   fileInput.value = '';
+  selectedCats = [];
   updateSaveState();
 }
 openAddBtn.addEventListener('click', openModal);
@@ -889,6 +951,7 @@ saveAddBtn.addEventListener('click', async () => {
       link: link || null,
       images: images,
       imageUrl: images[0],
+      categories: selectedCats,
       createdAt: serverTimestamp()
     });
     closeModal();
