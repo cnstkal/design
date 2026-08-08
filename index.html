@@ -459,6 +459,7 @@
 
     <label class="field-label">Category</label>
     <div class="tag-select" id="catSelect"></div>
+    <div class="tag-select" id="subSelect" style="margin-top:8px;"></div>
 
     <div class="modal-actions">
       <button class="btn-cancel" id="cancelAdd">취소</button>
@@ -506,6 +507,7 @@
 
     <label class="field-label">Category</label>
     <div class="tag-select" id="editCatSelect"></div>
+    <div class="tag-select" id="editSubSelect" style="margin-top:8px;"></div>
 
     <input type="file" id="editFileInput" accept="image/*" multiple style="display:none;" />
 
@@ -540,11 +542,13 @@ const designsCol = collection(db, "designs");
 const CLOUDINARY_CLOUD = 'dbljkloal';
 const CLOUDINARY_PRESET = 'Everything';
 
-const CATEGORIES = ['Design','Source','Font','Color','Mockup','Template','Tool'];
-const CAT_COLORS = { Design:'#B8763E', Source:'#5B7B9A', Font:'#7D9B6A', Color:'#B5556B', Mockup:'#8A6BAE', Template:'#C99A3E', Tool:'#4E9C8F' };
+const CATEGORIES = ['Design','Source','Font','Color','Mockup','Template','Tool','Effect'];
+const CAT_COLORS = { Design:'#B8763E', Source:'#5B7B9A', Font:'#7D9B6A', Color:'#B5556B', Mockup:'#8A6BAE', Template:'#C99A3E', Tool:'#4E9C8F', Effect:'#C2564A' };
+const EFFECT_TOOLS = ['Illustrator','After Effects','Premiere Pro','Photoshop'];
+const FONT_LANGS = ['English','Korean','Japanese','Chinese'];
 let activeCat = null;
-let selectedCats = [];
-let editSelectedCats = [];
+let selectedCats = [], selectedSub = [];
+let editSelectedCats = [], editSelectedSub = [];
 
 // ---------- State ----------
 let allDesigns = [];
@@ -563,6 +567,8 @@ const searchInput = document.getElementById('searchInput');
 const catBar = document.getElementById('catBar');
 const catSelect = document.getElementById('catSelect');
 const editCatSelect = document.getElementById('editCatSelect');
+const subSelect = document.getElementById('subSelect');
+const editSubSelect = document.getElementById('editSubSelect');
 
 function renderCatBar(){
   catBar.innerHTML = ['All', ...CATEGORIES].map(c =>
@@ -578,15 +584,34 @@ function renderCatBar(){
 }
 renderCatBar();
 
-function renderTagSelect(el, selectedArr){
+function renderTagSelect(el, selectedArr, onChange){
   el.innerHTML = CATEGORIES.map(c => `<button type="button" class="tag ${selectedArr.includes(c)?'on':''}" data-c="${c}" style="${selectedArr.includes(c)?`background:${CAT_COLORS[c]}`:''}">${c}</button>`).join('');
   el.querySelectorAll('.tag').forEach(btn => {
     btn.addEventListener('click', () => {
       const c = btn.dataset.c;
       const i = selectedArr.indexOf(c);
       if (i === -1) selectedArr.push(c); else selectedArr.splice(i, 1);
-      renderTagSelect(el, selectedArr);
+      renderTagSelect(el, selectedArr, onChange);
+      if (onChange) onChange();
     });
+  });
+}
+
+function renderSubSelect(el, cats, subArr){
+  const opts = cats.includes('Effect') ? EFFECT_TOOLS : cats.includes('Font') ? FONT_LANGS : [];
+  el.innerHTML = '';
+  el.style.display = opts.length ? 'flex' : 'none';
+  opts.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'tag' + (subArr.includes(opt)?' on':'');
+    if (subArr.includes(opt)) btn.style.background = '#555';
+    btn.textContent = opt;
+    btn.addEventListener('click', () => {
+      const i = subArr.indexOf(opt);
+      if (i === -1) subArr.push(opt); else subArr.splice(i, 1);
+      renderSubSelect(el, cats, subArr);
+    });
+    el.appendChild(btn);
   });
 }
 
@@ -642,7 +667,7 @@ function render(){
       </div>
       <div class="meta">
         <div class="name">${escapeHtml(d.name || '이름 없음')}</div>
-        ${(d.categories&&d.categories.length) ? `<div class="cats">${d.categories.map(c=>`<span style="background:${CAT_COLORS[c]}20;color:${CAT_COLORS[c]}">${c}</span>`).join('')}</div>` : ''}
+        ${(d.categories&&d.categories.length) ? `<div class="cats">${d.categories.map(c=>`<span style="background:${CAT_COLORS[c]}20;color:${CAT_COLORS[c]}">${c}</span>`).join('')}${(d.subTags||[]).map(s=>`<span style="background:#eee;color:#666">${s}</span>`).join('')}</div>` : ''}
       </div>
     `;
     card.addEventListener('click', () => openLightbox(d));
@@ -676,7 +701,7 @@ function openLightbox(d){
   lbName.textContent = d.name || '이름 없음';
   let catsEl = document.getElementById('lbCats');
   if (!catsEl){ catsEl = document.createElement('div'); catsEl.id='lbCats'; catsEl.className='lb-cats'; lbName.after(catsEl); }
-  catsEl.innerHTML = (d.categories||[]).map(c=>`<span style="background:${CAT_COLORS[c]}">${c}</span>`).join('');
+  catsEl.innerHTML = (d.categories||[]).map(c=>`<span style="background:${CAT_COLORS[c]}">${c}</span>`).join('') + (d.subTags||[]).map(s=>`<span style="background:#999">${s}</span>`).join('');
   if (d.link){
     lbLink.style.display = 'inline-flex';
     lbLink.href = d.link;
@@ -735,7 +760,9 @@ lbEdit.addEventListener('click', () => {
   editNameInput.value = d.name || '';
   editLinkInput.value = d.link || '';
   editSelectedCats = [...(d.categories||[])];
-  renderTagSelect(editCatSelect, editSelectedCats);
+  editSelectedSub = [...(d.subTags||[])];
+  renderTagSelect(editCatSelect, editSelectedCats, () => renderSubSelect(editSubSelect, editSelectedCats, editSelectedSub));
+  renderSubSelect(editSubSelect, editSelectedCats, editSelectedSub);
   renderEditThumbs();
   lightbox.classList.remove('open');
   editOverlay.classList.add('open');
@@ -827,7 +854,8 @@ saveEditBtn.addEventListener('click', async () => {
       link: editLinkInput.value.trim() || null,
       images: finalImages,
       imageUrl: finalImages[0],
-      categories: editSelectedCats
+      categories: editSelectedCats,
+      subTags: editSelectedSub
     });
     editOverlay.classList.remove('open');
   } catch(err){
@@ -842,8 +870,9 @@ saveEditBtn.addEventListener('click', async () => {
 
 // ---------- Add modal ----------
 function openModal(){
-  selectedCats = [];
-  renderTagSelect(catSelect, selectedCats);
+  selectedCats = []; selectedSub = [];
+  renderTagSelect(catSelect, selectedCats, () => renderSubSelect(subSelect, selectedCats, selectedSub));
+  renderSubSelect(subSelect, selectedCats, selectedSub);
   overlay.classList.add('open');
 }
 function closeModal(){
@@ -854,6 +883,7 @@ function closeModal(){
   linkInput.value = '';
   fileInput.value = '';
   selectedCats = [];
+  selectedSub = [];
   updateSaveState();
 }
 openAddBtn.addEventListener('click', openModal);
@@ -972,6 +1002,7 @@ saveAddBtn.addEventListener('click', async () => {
       images: images,
       imageUrl: images[0],
       categories: selectedCats,
+      subTags: selectedSub,
       createdAt: serverTimestamp()
     });
     closeModal();
