@@ -89,8 +89,8 @@
   .tag-select .tag.on{ color:#fff; border-color:transparent; }
   .lb-cats{ display:flex; gap:5px; flex-wrap:wrap; margin-bottom:14px; }
   .lb-cats span{ font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; color:#fff; }
-  .lb-link-btn{ font-family:inherit; display:inline-flex; align-items:center; gap:6px; background:var(--ink); color:#fff; border:none; padding:10px 16px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; margin-bottom:24px; width:fit-content; }
-  .lb-link-btn:hover{ background:var(--accent); }
+  .lb-link-btn{ font-family:inherit; display:inline-flex; align-items:center; gap:7px; background:#fff; color:var(--ink); border:1.5px solid var(--ink); padding:11px 18px; border-radius:999px; font-size:13px; font-weight:700; cursor:pointer; margin-bottom:22px; width:fit-content; text-decoration:none; transition:.15s ease; }
+  .lb-link-btn:hover{ background:var(--ink); color:#fff; transform:translateY(-1px); }
 
   .btn-add{
     font-family:inherit;
@@ -480,8 +480,8 @@
     </div>
     <div class="lb-info">
       <h3 id="lbName"></h3>
-      <a class="lb-link-btn" id="lbLink" target="_blank" rel="noopener">🔗 링크 열기</a>
-      <div class="lb-date" id="lbDate"></div>
+      <a class="lb-link-btn" id="lbLink" target="_blank" rel="noopener">Open Link ↗</a>
+      <div class="lb-date" id="lbDate" style="display:none;"></div>
       <div class="lb-spacer"></div>
       <div class="lb-btn-row">
         <button class="lb-edit" id="lbEdit">수정하기</button>
