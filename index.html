@@ -951,7 +951,20 @@ dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
 dropZone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropZone.classList.remove('drag');
-  handleFiles(e.dataTransfer.files);
+  if (e.dataTransfer.files.length > 0){
+    handleFiles(e.dataTransfer.files);
+    return;
+  }
+  const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+  if (url && /^https?:\/\//.test(url)){
+    fetch(url)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], 'image.jpg', { type: blob.type || 'image/jpeg' });
+        handleFiles([file]);
+      })
+      .catch(() => alert('이 이미지는 외부 사이트 보안(CORS) 정책 때문에 바로 가져올 수 없어요. 이미지를 저장한 뒤 업로드해주세요.'));
+  }
 });
 fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
