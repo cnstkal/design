@@ -968,6 +968,29 @@ dropZone.addEventListener('drop', (e) => {
 });
 fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
+document.addEventListener('paste', (e) => {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  const files = [];
+  for (const it of items){
+    if (it.type.startsWith('image/')) files.push(it.getAsFile());
+  }
+  if (files.length === 0) return;
+  if (overlay.classList.contains('open')){
+    e.preventDefault();
+    handleFiles(files);
+  } else if (editOverlay.classList.contains('open')){
+    e.preventDefault();
+    files.forEach(file => {
+      const previewUrl = URL.createObjectURL(file);
+      const item = { file, previewUrl, status: 'uploading', url: null };
+      editPendingUploads.push(item);
+      renderEditThumbs();
+      uploadToCloudinaryGeneric(item, renderEditThumbs);
+    });
+  }
+});
+
 function handleFiles(fileList){
   Array.from(fileList).forEach(file => {
     if (!file.type.startsWith('image/')) return;
