@@ -549,8 +549,9 @@ const CLOUDINARY_PRESET = 'Everything';
 
 const CATEGORIES = ['Design','Source','Font','Color','Mockup','Template','Tool','Effect','Tip'];
 const CAT_COLORS = { Design:'#B8763E', Source:'#5B7B9A', Font:'#7D9B6A', Color:'#B5556B', Mockup:'#8A6BAE', Template:'#C99A3E', Tool:'#4E9C8F', Effect:'#C2564A', Tip:'#4A7BC2' };
-const EFFECT_TOOLS = ['Illustrator','After Effects','Premiere Pro','Photoshop','AI'];
+const EFFECT_TOOLS = ['Illustrator','After Effects','Premiere Pro','Photoshop','AI','Etc'];
 const FONT_LANGS = ['English','Korean','Japanese','Chinese'];
+const TIP_OPTIONS = ['Site','Account'];
 let activeCat = null;
 let selectedCats = [], selectedSub = [];
 let editSelectedCats = [], editSelectedSub = [];
@@ -606,12 +607,13 @@ function renderTagSelect(el, selectedArr, onChange){
 
 function renderSubSelect(el, cats, subArr, labelEl){
   const isEffect = cats.includes('Effect');
-  const opts = isEffect ? EFFECT_TOOLS : cats.includes('Font') ? FONT_LANGS : [];
+  const isTip = cats.includes('Tip');
+  const opts = isEffect ? EFFECT_TOOLS : cats.includes('Font') ? FONT_LANGS : isTip ? TIP_OPTIONS : [];
   el.innerHTML = '';
   el.style.display = opts.length ? 'flex' : 'none';
   if (labelEl){
     labelEl.style.display = opts.length ? 'block' : 'none';
-    labelEl.textContent = isEffect ? 'Effect Tool' : 'Font Language';
+    labelEl.textContent = isEffect ? 'Effect Tool' : isTip ? 'Tip Type' : 'Font Language';
   }
   opts.forEach(opt => {
     const btn = document.createElement('button');
