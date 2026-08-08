@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Archive</title>
+<link rel="icon" href="icon-32.png" sizes="32x32">
+<link rel="icon" href="icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Archive">
+<meta name="theme-color" content="#FBF8F2">
 <link rel="stylesheet" as="style" crossorigin
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <style>
@@ -38,33 +46,21 @@
   }
   .header-inner{
     max-width:1280px; margin:0 auto;
-    padding:20px 28px;
+    padding:14px 16px;
     display:flex; align-items:center; justify-content:space-between;
-    gap:16px;
+    gap:10px;
   }
-  .brand{
-    display:flex; align-items:baseline; gap:10px;
-  }
-  .brand-mark{
-    width:9px; height:9px; border-radius:50%;
-    background:var(--accent);
-    display:inline-block;
-  }
-  .brand h1{
-    font-size:17px; font-weight:700; letter-spacing:-0.01em; margin:0;
-  }
-  .brand .count{
-    font-size:12.5px; color:var(--ink-soft); font-weight:500;
-  }
-  .header-actions{ display:flex; align-items:center; gap:10px; }
+  .header-actions{ display:flex; align-items:center; gap:10px; width:100%; }
 
   .search{
     position:relative;
+    flex:1;
+    min-width:0;
   }
   .search input{
     font-family:inherit;
-    width:220px;
-    padding:9px 14px 9px 32px;
+    width:100%;
+    padding:10px 14px 10px 34px;
     border-radius:999px;
     border:1px solid var(--line);
     background:var(--bg-soft);
@@ -72,10 +68,11 @@
     color:var(--ink);
     outline:none;
     transition:.15s ease;
+    box-sizing:border-box;
   }
-  .search input:focus{ border-color:var(--accent); background:#fff; width:260px; }
+  .search input:focus{ border-color:var(--accent); background:#fff; }
   .search svg{
-    position:absolute; left:11px; top:50%; transform:translateY(-50%);
+    position:absolute; left:12px; top:50%; transform:translateY(-50%);
     width:14px; height:14px; opacity:.5;
   }
 
@@ -104,9 +101,15 @@
     font-weight:600;
     cursor:pointer;
     display:flex; align-items:center; gap:6px;
+    white-space:nowrap;
+    flex-shrink:0;
     transition:.15s ease;
   }
   .btn-add:hover{ background:var(--accent); transform:translateY(-1px); }
+  @media (max-width:520px){
+    .btn-add{ width:40px; height:40px; padding:0; border-radius:50%; justify-content:center; }
+    .btn-add span{ display:none; }
+  }
 
   /* ---------- Grid ---------- */
   main{
@@ -292,13 +295,14 @@
     display:flex;
     overflow:hidden;
   }
-  @media (max-width:760px){ .lb-inner{ flex-direction:column; overflow-y:auto; max-height:92vh; } }
+  @media (max-width:760px){ .lb-inner{ flex-direction:column; overflow-y:auto; max-height:92vh; } .lb-img-wrap{ flex:none; max-height:48vh; } }
   .lb-img-wrap{
     flex:1.3; background:var(--bg-soft);
     display:flex; align-items:center; justify-content:center;
     min-width:0;
   }
   .lb-img-wrap img{ width:100%; height:100%; object-fit:contain; max-height:90vh; }
+  @media (max-width:760px){ .lb-img-wrap img{ max-height:48vh; } }
   .lb-info{
     flex:1; padding:28px;
     display:flex; flex-direction:column;
@@ -412,11 +416,6 @@
 
 <header>
   <div class="header-inner">
-    <div class="brand">
-      <span class="brand-mark"></span>
-      <h1>Archive</h1>
-      <span class="count" id="count"></span>
-    </div>
     <div class="header-actions">
       <div class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -424,7 +423,7 @@
       </div>
       <button class="btn-add" id="openAdd">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        추가
+        <span>추가</span>
       </button>
     </div>
   </div>
@@ -664,7 +663,7 @@ function render(){
 
   grid.innerHTML = '';
   emptyState.style.display = filtered.length === 0 ? 'flex' : 'none';
-  countEl.textContent = allDesigns.length ? `${allDesigns.length}개` : '';
+  if(countEl) countEl.textContent = allDesigns.length ? `${allDesigns.length}개` : '';
 
   filtered.forEach(d => {
     const images = d.images && d.images.length ? d.images : (d.imageUrl ? [d.imageUrl] : []);
@@ -673,7 +672,7 @@ function render(){
     card.innerHTML = `
       <div class="img-wrap">
         <img src="${images[0] || ''}" loading="lazy" onerror="this.onerror=null;this.src=${fallbackImg(d.name)}" />
-        ${images.length > 1 ? `<div class="img-count">🖼 ${images.length}</div>` : ''}
+        ${images.length > 1 ? `<div class="img-count"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>${images.length}</div>` : ''}
       </div>
       <div class="meta">
         <div class="name">${escapeHtml(d.name || '이름 없음')}</div>
