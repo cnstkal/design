@@ -932,19 +932,38 @@ async function uploadToCloudinary(item){
 function updateSaveState(){
   const hasDone = pendingUploads.some(p => p.status === 'done');
   const stillUploading = pendingUploads.some(p => p.status === 'uploading');
-  saveAddBtn.disabled = !hasDone || stillUploading;
+  const hasLink = linkInput.value.trim().length > 0;
+  saveAddBtn.disabled = stillUploading || (!hasDone && !hasLink);
   saveAddBtn.textContent = stillUploading ? '업로드 중...' : '저장';
+}
+linkInput.addEventListener('input', updateSaveState);
+
+async function fetchLinkThumbnail(url){
+  try{
+    const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
+    const data = await res.json();
+    return data.thumbnail_url || null;
+  } catch(e){ return null; }
 }
 
 saveAddBtn.addEventListener('click', async () => {
   const doneItems = pendingUploads.filter(p => p.status === 'done');
-  if (doneItems.length === 0) return;
+  const name = nameInput.value.trim();
+  const link = linkInput.value.trim();
+  if (doneItems.length === 0 && !link) return;
   saveAddBtn.disabled = true;
   saveAddBtn.textContent = '저장 중...';
 
-  const name = nameInput.value.trim();
-  const link = linkInput.value.trim();
-  const images = doneItems.map(item => item.url);
+  let images = doneItems.map(item => item.url);
+  if (images.length === 0 && link){
+    const thumb = await fetchLinkThumbnail(link);
+    if (thumb) images = [thumb];
+  }
+  if (images.length === 0){
+    alert('이미지를 못 찾았어요. 사진을 직접 올려주세요.');
+    saveAddBtn.disabled = false; saveAddBtn.textContent = '저장';
+    return;
+  }
 
   try {
     await addDoc(designsCol, {
