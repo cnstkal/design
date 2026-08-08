@@ -547,7 +547,7 @@ const CLOUDINARY_PRESET = 'Everything';
 
 const CATEGORIES = ['Design','Source','Font','Color','Mockup','Template','Tool','Effect','Tip'];
 const CAT_COLORS = { Design:'#B8763E', Source:'#5B7B9A', Font:'#7D9B6A', Color:'#B5556B', Mockup:'#8A6BAE', Template:'#C99A3E', Tool:'#4E9C8F', Effect:'#C2564A', Tip:'#4A7BC2' };
-const EFFECT_TOOLS = ['Illustrator','After Effects','Premiere Pro','Photoshop'];
+const EFFECT_TOOLS = ['Illustrator','After Effects','Premiere Pro','Photoshop','AI'];
 const FONT_LANGS = ['English','Korean','Japanese','Chinese'];
 let activeCat = null;
 let selectedCats = [], selectedSub = [];
@@ -672,7 +672,7 @@ function render(){
     card.className = 'card';
     card.innerHTML = `
       <div class="img-wrap">
-        <img src="${images[0] || ''}" loading="lazy" />
+        <img src="${images[0] || ''}" loading="lazy" onerror="this.onerror=null;this.src=${fallbackImg(d.name)}" />
         ${images.length > 1 ? `<div class="img-count">🖼 ${images.length}</div>` : ''}
       </div>
       <div class="meta">
@@ -689,6 +689,10 @@ function escapeHtml(str){
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+function fallbackImg(name){
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><rect width='100%' height='100%' fill='#EFE7D8'/><text x='50%' y='50%' font-family='sans-serif' font-size='20' fill='#8C8577' text-anchor='middle' dominant-baseline='middle'>${escapeHtml(name||'Link')}</text></svg>`;
+  return "'data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg))) + "'";
 }
 
 // ---------- Firestore live sync ----------
@@ -725,6 +729,7 @@ function openLightbox(d){
 }
 
 function renderLbImage(){
+  lbImg.onerror = () => { lbImg.onerror = null; lbImg.src = fallbackImg(lbName.textContent).slice(1,-1); };
   lbImg.src = lbImages[lbIndex];
   const multi = lbImages.length > 1;
   lbPrev.style.display = multi ? 'flex' : 'none';
@@ -982,8 +987,16 @@ async function fetchLinkThumbnail(url){
   try{
     const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
     const data = await res.json();
-    return data.thumbnail_url || null;
-  } catch(e){ return null; }
+    if (data.thumbnail_url){
+      // proxy through weserv to bypass instagram hotlink blocking
+      return `https://images.weserv.nl/?url=${encodeURIComponent(data.thumbnail_url.replace(/^https?:\/\//,''))}`;
+    }
+  } catch(e){}
+  // fallback: generated placeholder with domain name
+  let host = 'Link';
+  try{ host = new URL(url).hostname.replace('www.',''); } catch(e){}
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><rect width='100%' height='100%' fill='#EFE7D8'/><text x='50%' y='50%' font-family='sans-serif' font-size='22' fill='#8C8577' text-anchor='middle' dominant-baseline='middle'>${host}</text></svg>`;
+  return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 }
 
 saveAddBtn.addEventListener('click', async () => {
@@ -996,11 +1009,10 @@ saveAddBtn.addEventListener('click', async () => {
 
   let images = doneItems.map(item => item.url);
   if (images.length === 0 && link){
-    const thumb = await fetchLinkThumbnail(link);
-    if (thumb) images = [thumb];
+    images = [await fetchLinkThumbnail(link)];
   }
   if (images.length === 0){
-    alert('이미지를 못 찾았어요. 사진을 직접 올려주세요.');
+    alert('사진을 올리거나 링크를 입력해주세요.');
     saveAddBtn.disabled = false; saveAddBtn.textContent = '저장';
     return;
   }
